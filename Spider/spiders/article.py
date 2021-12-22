@@ -20,22 +20,24 @@ class ArticleSpider(scrapy.Spider):
         resp = response.xpath('//div[@class="listbox"]//div[@class="listitem"]/ul/li')
         for r in resp:
             item = ArticleItem()
-            print('1111')
+            title = r.xpath('./a/text()').extract_first()
+            item['title'] = title
             link = r.xpath('./a/@href').extract_first()
-            a_id = re.findall(r'e/(.*?).html', link)[0]
-            yield scrapy.Request(response.urljoin(self.read_count_url.format(a_id)), self.article_detail_parse)
-            item['title'] = link
-            yield item
-
-        # if self.page < 5:
-        #     yield scrapy.Request(self.home_url.format(self.page), callback=self.parse)
+            a_id = re.findall(r'\d+', link)[0]
+            yield scrapy.Request(
+                self.read_count_url.format(a_id),
+                callback=self.article_detail_parse,
+                meta={"item": item}
+            )
+        if self.page < 10:
+            yield scrapy.Request(self.home_url.format(self.page), callback=self.parse)
 
     def article_detail_parse(self, response):
-        item = ArticleItem()
         count = re.findall(r"'(.*?)'", response.text)[0]
-        print(response.url, count)
-        item['messages'] = count
-        yield item
+        response.meta["item"]["messages"] = count
+        yield response.meta["item"]
+
+
 
 
 
